@@ -1,8 +1,10 @@
 package ai.rever.boss.files
 
+import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.attribute.PosixFilePermissions
 import java.util.concurrent.TimeUnit
 import kotlin.test.Test
@@ -11,6 +13,7 @@ import kotlin.test.assertFails
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import org.junit.Assume.assumeTrue
 
 class NativeDirectoryTest {
     @Test
@@ -66,6 +69,7 @@ class NativeDirectoryTest {
     fun `held directory cannot be redirected by replacing its pathname with a link`() {
         val root = Files.createTempDirectory("native-directory-").toRealPath()
         try {
+            assumeSymlinksSupported(root)
             val inside = Files.createDirectory(root.resolve("inside"))
             val outside = Files.createDirectory(root.resolve("outside"))
             Files.writeString(outside.resolve("sentinel"), "unchanged")
@@ -130,6 +134,7 @@ class NativeDirectoryTest {
     fun `links cannot be opened but can be inspected renamed and unlinked`() {
         val root = Files.createTempDirectory("native-directory-").toRealPath()
         try {
+            assumeSymlinksSupported(root)
             val target = Files.writeString(root.resolve("target"), "sentinel")
             Files.createSymbolicLink(root.resolve("link"), target)
             NativeDirectory.open(root).use { directory ->
@@ -145,5 +150,21 @@ class NativeDirectoryTest {
         } finally {
             root.toFile().deleteRecursively()
         }
+    }
+
+    private fun assumeSymlinksSupported(root: Path) {
+        val probe = root.resolve("symlink-support-probe")
+        val supported =
+            try {
+                Files.createSymbolicLink(probe, root)
+                Files.deleteIfExists(probe)
+                true
+            } catch (_: UnsupportedOperationException) {
+                false
+            } catch (_: IOException) {
+                // e.g. Windows without the symlink-creation privilege (Developer Mode off)
+                false
+            }
+        assumeTrue("Symbolic link creation is not permitted on this platform", supported)
     }
 }
