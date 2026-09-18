@@ -154,17 +154,22 @@ class NativeDirectoryTest {
 
     private fun assumeSymlinksSupported(root: Path) {
         val probe = root.resolve("symlink-support-probe")
-        val supported =
-            try {
-                Files.createSymbolicLink(probe, root)
-                Files.deleteIfExists(probe)
-                true
-            } catch (_: UnsupportedOperationException) {
-                false
-            } catch (_: IOException) {
-                // e.g. Windows without the symlink-creation privilege (Developer Mode off)
-                false
-            }
-        assumeTrue("Symbolic link creation is not permitted on this platform", supported)
+        try {
+            // The target need not exist. A dangling target avoids leaving a directory cycle
+            // behind if cleanup itself fails after the privilege probe succeeds.
+            Files.createSymbolicLink(probe, root.resolve("symlink-probe-target"))
+        } catch (_: UnsupportedOperationException) {
+            assumeTrue("This filesystem does not support symbolic links", false)
+            return
+        } catch (e: IOException) {
+            // Standard Windows users need Developer Mode or SeCreateSymbolicLinkPrivilege.
+            // On POSIX, an IOException indicates a real fixture/environment failure that the
+            // security-sensitive tests must surface rather than silently skip.
+            if (!System.getProperty("os.name").startsWith("Windows")) throw e
+            assumeTrue("Symbolic link creation is not permitted on this Windows host", false)
+            return
+        }
+        // Do not misclassify a cleanup failure as lack of symlink support.
+        Files.delete(probe)
     }
 }
