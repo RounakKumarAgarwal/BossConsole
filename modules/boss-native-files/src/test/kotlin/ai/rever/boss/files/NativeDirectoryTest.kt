@@ -1,5 +1,6 @@
 package ai.rever.boss.files
 
+import org.junit.Assume.assumeTrue
 import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.file.FileAlreadyExistsException
@@ -13,7 +14,6 @@ import kotlin.test.assertFails
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
-import org.junit.Assume.assumeTrue
 
 class NativeDirectoryTest {
     @Test
