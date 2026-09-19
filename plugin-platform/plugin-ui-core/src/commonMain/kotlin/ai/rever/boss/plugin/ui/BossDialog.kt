@@ -578,9 +578,12 @@ internal fun anchorRectInDp(
     density: Float,
 ): IntRect {
     // Guard against the Unspecified/NaN offset a detached or not-yet-placed layout reports.
-    if (density <= 0f || positionPx.isUnspecified || positionPx.x.isNaN() || positionPx.y.isNaN()) {
-        return IntRect.Zero
-    }
+    val positionUnusable =
+        density <= 0f ||
+            positionPx.isUnspecified ||
+            positionPx.x.isNaN() ||
+            positionPx.y.isNaN()
+    if (positionUnusable) return IntRect.Zero
     val left = (positionPx.x / density).roundToInt()
     val top = (positionPx.y / density).roundToInt()
     return IntRect(
